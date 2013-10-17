@@ -1,0 +1,28 @@
+NAMES END /* CodeWarrior will pass all the needed files to the linker by command line. But here you may add your own files too. */
+
+SEGMENTS  /* Here all RAM/ROM areas of the device are listed. Used in PLACEMENT below. */
+      PSEUDO_ROM    = READ_ONLY     0x3800 TO   0x3FFE;
+      RAM           = READ_WRITE    0x0FFF TO   0x0FFF;
+END
+
+PLACEMENT /* here all predefined and user segments are placed into the SEGMENTS defined above. */
+          /* allocate stack first to avoid overwriting variables on overflow */
+      .data             INTO  RAM;
+      
+      .rodata,
+      .init,
+      .common,
+      .text             INTO  PSEUDO_ROM;                  
+END
+
+ENTRIES /* keep the following unreferenced variables */
+stackSpace 
+headerPtr
+END
+
+INIT asm_entry
+
+STACKSIZE 0
+
+VECTOR 0 asm_testApp /* reset vector: this is the default entry point for a C/C++ application. */
+
