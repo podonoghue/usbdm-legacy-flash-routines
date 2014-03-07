@@ -17,6 +17,7 @@
 
 //!   S12FTS16KV1    -  16K Flash  1x16K block,  512 byte sector
 //!   S12FTS32KV1    -  32K Flash  1x32K block,  512 byte sector
+//!   S12FTS64K      -  64K Flash  2x32K block,  512 byte sector - Requires shift modification (fcnfgValue)
 //!   S12FTS64K      -  64K Flash  1x64K block,  512 byte sector
 //!   S12FTS64KV1    -  64K Flash  1x64K block,  512 byte sector
 //!   S12FTS64KV4    -  64K Flash  1x64K block, 1024 byte sector
@@ -566,7 +567,11 @@ void entry(void) {
    // Set FCNFG
    fcnfgValue = 0x00;  
    if (((flashData->address>>8)>=0x80) && ((flashData->address>>8)<0xC0)) {
-#ifdef FTS_2  // 128K Blocks
+#ifdef FTS_3  
+   // 32K Blocks with funny mapping
+   // pages(3C,3F) = Block(0), pages(3D,3E) = Block(1)  
+      fcnfgValue = ((flashData->page>>1)^flashData->page)&0x0F;
+#elif defined(FTS_2)  // 128K Blocks
       fcnfgValue = ~(flashData->page>>3)&0x0F;
 #else         // 64K Blocks or only a single block
       fcnfgValue = ~(flashData->page>>2)&0x0F;
