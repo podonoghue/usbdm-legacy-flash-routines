@@ -1,6 +1,8 @@
 //!
 //! Flash programming code (HCS12-MMCV4-FTS-flash-program)
 //! Flash programming code (HCS12-MMCV4-FTS_2-flash-program)
+//! Flash programming code (HCS12-MMCV4-FTS_3-flash-program)
+//! Flash programming code (HCS12-MMCV4-FTS_T-flash-program)
 //!
 //! Families
 //!   'Standard' HCS12 devices e.g.
@@ -10,14 +12,15 @@
 //!   CPU12
 //!
 //! Paged memory management (PPAGE=0x30)
-//!   S12MMCVx
+//!   MMC, S12MMCVx
 //!
 //! CPU Memory accesses are limited to 64K
 //!
-
+//!   9S12T64A       - Flash EEPROM 64K                          - FTS_T
+//!   
 //!   S12FTS16KV1    -  16K Flash  1x16K block,  512 byte sector
 //!   S12FTS32KV1    -  32K Flash  1x32K block,  512 byte sector
-//!   S12FTS64K      -  64K Flash  2x32K block,  512 byte sector - Requires shift modification (fcnfgValue)
+//!   S12FTS64K      -  64K Flash  2x32K block,  512 byte sector - FTS_3
 //!   S12FTS64K      -  64K Flash  1x64K block,  512 byte sector
 //!   S12FTS64KV1    -  64K Flash  1x64K block,  512 byte sector
 //!   S12FTS64KV4    -  64K Flash  1x64K block, 1024 byte sector
@@ -27,8 +30,8 @@
 //!   S12FTS128KV2   - 128K Flash  2x64K block,  512 byte sector
 //!   S12FTS256KV2   - 256K Flash  4x64K block,  512 byte sector
 //!   S12FTS256KV3   - 256K Flash  4x64K block,  512 byte sector
-//!   S12FTS256K2V1  - 256K Flash 2x128K block, 1024 byte sector - Requires shift modification (fcnfgValue)
-//!   S12FTS512K4V1  - 512K Flash 4x128K block, 1024 byte sector - Requires shift modification (fcnfgValue)
+//!   S12FTS256K2V1  - 256K Flash 2x128K block, 1024 byte sector - FTS_2
+//!   S12FTS512K4V1  - 512K Flash 4x128K block, 1024 byte sector - FTS_2
 //!
 //!   S12EETS2KV1  -   1K EEPROM   4 byte sectors
 //!   S12EETS2KV1  -   2K EEPROM   4 byte sectors
@@ -565,18 +568,63 @@ void entry(void) {
    PPAGE = flashData->page;
    
    // Set FCNFG
-   fcnfgValue = 0x00;  
-   if (((flashData->address>>8)>=0x80) && ((flashData->address>>8)<0xC0)) {
-#ifdef FTS_3  
-   // 32K Blocks with funny mapping
-   // pages(3C,3F) = Block(0), pages(3D,3E) = Block(1)  
+#if defined(FTS_T)
+   /*  Range      PPAGE   BKSEL
+    *  0000-3FFF   -        1
+    *  4000-7FFF   -        1
+    *  8000-BFFF   3D       1
+    *  8000-BFFF   3E       1
+    *  8000-BFFF   3C       0
+    *  8000-BFFF   3F       0
+    *  C000-FFFF   -        0           
+    */
+   fcnfgValue = 0x00;    
+   if ((flashData->address>>8)<0x80) {
+      fcnfgValue = 0x01; // Flash block 1    
+   } 
+   else if (((flashData->address>>8)>=0x80) && ((flashData->address>>8)<0xC0)) {
+      // pages(3C,3F) = Block(0), pages(3D,3E) = Block(1)  
       fcnfgValue = ((flashData->page>>1)^flashData->page)&0x0F;
-#elif defined(FTS_2)  // 128K Blocks
-      fcnfgValue = ~(flashData->page>>3)&0x0F;
-#else         // 64K Blocks or only a single block
-      fcnfgValue = ~(flashData->page>>2)&0x0F;
-#endif
    }
+#elif defined(FTS_2)
+   /*  Range      PPAGE   BKSEL
+    *  0000-3FFF   -        0
+    *  4000-7FFF   -        0
+    *  8000-BFFF   -      128K Blocks reverse mapped
+    *  C000-FFFF   -        0           
+    */
+   fcnfgValue = 0x00;    
+   if (((flashData->address>>8)>=0x80) && ((flashData->address>>8)<0xC0)) {
+      fcnfgValue = (~(flashData->page>>3))&0x0F;
+   }
+#elif defined(FTS_3)
+   /*  Range      PPAGE   BKSEL
+    *  0000-3FFF   -        0
+    *  4000-7FFF   -        0
+    *  8000-BFFF   3D       1
+    *  8000-BFFF   3E       1
+    *  8000-BFFF   3C       0
+    *  8000-BFFF   3F       0
+    *  C000-FFFF   -        0           
+    */
+   fcnfgValue = 0x00;    
+   if (((flashData->address>>8)>=0x80) && ((flashData->address>>8)<0xC0)) {
+      // pages(3C,3F) = Block(0), pages(3D,3E) = Block(1)  
+      fcnfgValue = ((flashData->page>>1)^flashData->page)&0x0F;
+   }
+#else
+   /*  Range      PPAGE   BKSEL
+    *  0000-3FFF   -        0
+    *  4000-7FFF   -        0
+    *  8000-BFFF   -      64K Blocks reverse mapped
+    *  C000-FFFF   -        0           
+    */
+   fcnfgValue = 0x00;    
+   if (((flashData->address>>8)>=0x80) && ((flashData->address>>8)<0xC0)) {
+      fcnfgValue = ~(flashData->page>>2)&0x0F;
+   }
+#endif
+
    flashData->controller->fcnfg = fcnfgValue;
 
    // Uses Paged addresses
