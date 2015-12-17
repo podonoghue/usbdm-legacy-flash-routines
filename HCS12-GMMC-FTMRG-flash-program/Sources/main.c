@@ -292,6 +292,7 @@ uint16_t readGlobalWord(uint32_t gAddress) {
 //! @param address - (D) ptr to 32-bit local/global address
 //!
 //! @note bit#31 indicates a global address needing no translation
+//!
 void makeLinearAddress(uint32_t *address) {
    // D = address
    asm {
@@ -303,63 +304,53 @@ void makeLinearAddress(uint32_t *address) {
       //
       brset 0,x,#0x80,done          // Already global - done
       
-      ldd   1,x                     // A = PPAGE, B = addr[15:8]
+      ldab  2,x                     // B = addr[15:8]
       
-      cmpb  #0x40                   // Try 0x0000-0x3FFF
-      blo   tryEEPROM               // Yes - try D-flash
-                                    
-      ldaa  #0x0D                   // Try 0x4000-0x7FFF, equivalent page=0x0D
-      cmpb  #0x80
+      cmpb  #0x04                   // <0x0400?
+      blo   error                   // Yes  => error (Register space)
+
+#if defined(BUILD_TARGET_FLASH)
+      ldaa  #0x0C                   // PPage for unpaged P-Flash  0x0400-0x4000
+#elif defined(BUILD_TARGET_EEPROM)
+      ldaa  #0x00                   // PPage for unpaged EEPROM   0x0400-0x4000
+#else
+#error "Must define BUILD_TARGET_FLASH or BUILD_TARGET_EEPROM"
+#endif
+      cmpb  #0x40                   // Try 0x0400-0x3FFF
       blo   checkUnPaged            // Yes - check unpaged
 
-      ldaa  1,x                     // Try 0x8000-0xBFFF, page is dynamic
-      cmpb  #0xC0
-      blo   doPFlash                // Yes - paged P-flash
-
-      ldaa  #0x0F                   // Must be 0xC000-0xFFFF, equivalent page=0x0F
-                                    // Check unpaged
+      ldaa  #0x0D                   // PPage for unpaged 0x4000-0x7FFF
+      cmpb  #0x80                   // Try 0x4000-0x7FFF
+      blo   checkUnPaged            // Yes - check unpaged
+                                    
+      ldaa  #0x0F                   // PPage for unpaged 0xC000-0xFFFF
+      cmpb  #0xC0                   // Try 0xC000-0xFFFF
+      bhs   checkUnPaged            // Yes - check unpaged
+      
+      ldaa  1,x                     // PPage                              
+      bra   doPFlash                // Yes - paged P-flash
 
    checkUnPaged:
-      // 0x4000-0x7FFF & 0xC000-0xFFFF should have page# = 0
+      // 0x0400-0x7FFF & 0xC000-0xFFFF should have page# = 0
       tst   1,x
       bne   error
             
    doPFlash:
       // P-Flash
       // A=PPage #, B=Address[15:8]
-      // G-address[23:16] <= 01:PPage[7:2]
-      // G-address[15:08] <= PPage[0:1]:Address[13:08]
+      // Calculate:
+      //   G-address[23:16] <= PPage[7:2]
+      //   G-address[15:08] <= PPage[0:1]:Address[13:08]
       //
       lslb
       lslb
       lsrd
       lsrd         // B = PPage[0:1]:Address[13:08]
-                   // A = Page[7:2]
-      bra   setGAddress
-      
-   tryEEPROM:
+                   // A = PPage[7:2]
 
-      // A=PPage #, B=Address[15:8]
-      tsta                         // Page # must be 0 for non-paged 0x0000-0x3FFF
-      bne   error                   
-      cmpb  #0x04                  // <0x0400
-      blo   error                  // No  - error (Registers)
-      ldaa  #0x0C                  // PPage for unpaged P-Flash  0x1400-
-      cmpb  #0x14                  // >=0x1400
-      bhs   doPFlash               // No  - assume unpahed PFlash
-                                   // Unpaged PFlash below 0x1400 is not handled
-                                   // as assumed EEPROM
-   doDFlash:
-      // D-Flash
-      // A=0, B=Address[15:8]
-      // G-address[23:16] <= 00000000       (in 1,x)
-      // G-address[15:08] <= Address[15:08] (in 2,x)
-      //
-      clra        // A = G-Address[23:16]
-                  // B = G-Address[15:08]
-      
    setGAddress:
       std   1,x      // Update G-address[23:08]
+
    done:
       clr   0,x      // Clear global indicator      
       rts
