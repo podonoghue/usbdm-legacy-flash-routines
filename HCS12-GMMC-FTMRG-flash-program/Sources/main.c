@@ -2,7 +2,7 @@
 //! Flash programming code (HCS12-PMMC-FTMRCK1-flash-program)
 //!
 //! Families
-//!   MC9S12G
+//!   MC9S12G, MC9S12VR
 //!
 //! CPU
 //!   CPU12
@@ -14,12 +14,13 @@
 //! Paged addresses are mapped to Global for programming
 //! CPU Memory accesses use PPAGE
 //!
-//!   S12FTMRG16K1V1  -  16K P-flash ( 32x512B sectors), 512B D-flash (128x4B sectors)
-//!   S12FTMRG32K1V1  -  32K P-flash ( 64x512B sectors), 1K   D-flash (256x4B sectors)
-//!   S12FTMRG48K1V1  -  48K P-flash ( 96x512B sectors), 1.5K D-flash (384x4B sectors)
-//!   S12FTMRG64K1V1  -  64K P-flash (128x512B sectors), 2K   D-flash (512x4B sectors)
-//!   S12FTMRG96K1V1  -  96K P-flash (192x512B sectors), 3K   D-flash (768x4B sectors)
-//!   S12FTMRG128K1V1 - 128K P-flash (256x512B sectors), 4K   D-flash (1024x4B sectors)
+//!   S12FTMRG16K1V1   -  16K P-flash ( 32x512B sectors), 512B D-flash (128x4B sectors)
+//!   S12FTMRG32K1V1   -  32K P-flash ( 64x512B sectors), 1K   D-flash (256x4B sectors)
+//!   S12FTMRG48K1V1   -  48K P-flash ( 96x512B sectors), 1.5K D-flash (384x4B sectors)
+//!   S12FTMRG64K1V1   -  64K P-flash (128x512B sectors), 2K   D-flash (512x4B sectors)
+//!   S12FTMRG96K1V1   -  96K P-flash (192x512B sectors), 3K   D-flash (768x4B sectors)
+//!   S12FTMRG128K1V1  - 128K P-flash (256x512B sectors), 4K   D-flash (1024x4B sectors)
+//!   S12FTMRG64K512V1 -  64K P-flash (128x512B sectors), 512B D-flash (128x4B sectors)
 //!
 //! This code accepts Global addresses (bit 31=1) or paged addresses
 //!
